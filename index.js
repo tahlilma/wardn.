@@ -1,6 +1,16 @@
+const express = require("express");
+const app = express();
 const Discord = require("discord.js");
-const fs = require("fs");
+const fs = require("fs/promises");
 require("dotenv").config();
+
+const port = 3000;
+
+app.get("/", (_, res) => res.send("Hello World!"));
+
+app.listen(port, () =>
+  console.log(`Example app listening at http://localhost:${port}`)
+);
 
 const client = new Discord.Client();
 
@@ -14,55 +24,65 @@ const getBDTimeAndDate = () => {
   return `${hours}:${minutes} on ${direct}/${month + 1}/${year}`;
 };
 
-getBDTimeAndDate();
-
 client.on("ready", () => {
   console.log(`Logged in as ${client.user.tag}`);
 });
 
 client.on("messageDelete", (message) => {
+  if (message.author.bot) return;
+  if (message.content.split(" ")[0] === "!clear") return; // mee6 specific shit
+
   try {
     const embed = new Discord.MessageEmbed()
       .setColor("RED")
       .setTitle(`⛔ Delete Detected ⛔`)
       .addFields([
         { name: "Message Sender:", value: `<@${message.author.id}>` },
-        { name: "Content:", value: `${message.content}` },
-        { name: "Deleted At:", value: `${getBDTimeAndDate()}` },
+        { name: "Deleted At:", value: `\`${getBDTimeAndDate()}\`` },
+        { name: "Channel Name:", value: `\`${message.channel.name}\`` },
+        { name: "Message:", value: `${message.content}` },
       ]);
 
     client.channels.cache.get(process.env.CHANNEL_ID).send(embed);
   } catch (err) {
     console.error(err);
+    return;
   }
 });
 
-client.on("messageDeleteBulk", (messages) => {
+client.on("messageDeleteBulk", async (messages) => {
   try {
-    // code beyond this point is highly experimental
-    const list = messages.map((item) => {
+    const data = messages.map((message) => {
       return {
-        id: item.author.id,
-        content: item.content,
-        username: item.author.tag,
+        senderID: message.author.id,
+        senderName: message.author.tag,
+        content: message.content,
+        channel: message.channel.name,
+        deletedAt: getBDTimeAndDate(),
       };
     });
 
-    const create = new Promise((resolve, reject) => {
-      fs.writeFileSync(`./temp/temp.json`, JSON.stringify(list));
-      resolve("file created");
+    const prettyPrint = JSON.stringify(data, null, 2); // make it pretty
+
+    await fs.writeFile("./temp/dump.json", prettyPrint, "utf-8");
+
+    const embed = new Discord.MessageEmbed()
+      .setColor("YELLOW")
+      .setTitle("⛔ Bulk Delete Detected ⛔")
+      .setDescription(
+        "Someone has just deleted messages in bulk. I will try to generate a dump file from those messages. (PS: Empty `content` field in an object means that the message was an image or an attachment."
+      )
+      .setFooter(`${getBDTimeAndDate()}`);
+
+    await client.channels.cache.get(process.env.CHANNEL_ID).send(embed); // Cant send embeds with files for some reason -,-
+
+    client.channels.cache.get(process.env.CHANNEL_ID).send("", {
+      files: ["./temp/dump.json"],
     });
-    create.then(() => {
-      const embed = new Discord.MessageEmbed()
-        .setTitle("Bulk Delete Detected")
-        .setColor("YELLOW")
-        .setFooter(`Time: ${getBDTimeAndDate()}`);
-      client.channels.cache
-        .get(process.env.CHANNEL_ID)
-        .send(embed, { files: [`./temp/temp.json`] });
-    });
+
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    return;
   }
 });
 
