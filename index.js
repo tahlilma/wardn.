@@ -1,7 +1,8 @@
 const express = require("express");
 const app = express();
 const Discord = require("discord.js");
-const fs = require("fs/promises");
+const fs = require("fs");
+const schedule = require("node-schedule");
 require("dotenv").config();
 
 const port = 3000;
@@ -28,6 +29,42 @@ client.on("ready", () => {
   console.log(`Logged in as ${client.user.tag}`);
 });
 
+client.on("message", (message) => {
+  try {
+    let oldData = fs.readFileSync("./log.json", "utf-8");
+    oldData = JSON.parse(oldData);
+
+    const payload = {
+      senderID: message.author.id,
+      senderName: message.author.tag,
+      content: message.content,
+      channel: message.channel.name,
+      sentAt: getBDTimeAndDate(),
+    };
+
+    const newData = [...oldData, payload];
+
+    fs.writeFileSync("./log.json", JSON.stringify(newData, null, 2), "utf-8");
+  } catch (err) {
+    console.error(err);
+    return;
+  }
+});
+
+schedule.scheduleJob("0 0 * * *", async () => {
+  const embed = new Discord.MessageEmbed()
+    .setColor("GREEN")
+    .setTitle("Todays Data")
+    .setDescription("This is a log of all the messages sent today.")
+    .setFooter(getBDTimeAndDate());
+  await client.channels.cache.get(process.env.CHANNEL_ID).send(embed);
+  await client.channels.cache.get(process.env.CHANNEL_ID).send("", {
+    files: ["./log.json"],
+  });
+
+  fs.writeFileSync("./log.json", "[]", "utf-8");
+});
+
 client.on("messageDelete", (message) => {
   if (message.author.bot) return;
   if (message.content.split(" ")[0] === "!clear") return; // mee6 specific shit
@@ -50,40 +87,41 @@ client.on("messageDelete", (message) => {
   }
 });
 
-client.on("messageDeleteBulk", async (messages) => {
-  try {
-    const data = messages.map((message) => {
-      return {
-        senderID: message.author.id,
-        senderName: message.author.tag,
-        content: message.content,
-        channel: message.channel.name,
-        deletedAt: getBDTimeAndDate(),
-      };
-    });
+// Replit moment
+// client.on("messageDeleteBulk", async (messages) => {
+//   try {
+//     const data = messages.map((message) => {
+//       return {
+//         senderID: message.author.id,
+//         senderName: message.author.tag,
+//         content: message.content,
+//         channel: message.channel.name,
+//         deletedAt: getBDTimeAndDate(),
+//       };
+//     });
 
-    const prettyPrint = JSON.stringify(data, null, 2); // make it pretty
+//     const prettyPrint = JSON.stringify(data, null, 2); // make it pretty
 
-    await fs.writeFile("./temp/dump.json", prettyPrint, "utf-8");
+//     await fs.writeFile("./temp/dump.json", prettyPrint, "utf-8");
 
-    const embed = new Discord.MessageEmbed()
-      .setColor("YELLOW")
-      .setTitle("⛔ Bulk Delete Detected ⛔")
-      .setDescription(
-        "Someone has just deleted messages in bulk. I will try to generate a dump file from those messages. (PS: Empty `content` field in an object means that the message was an image or an attachment."
-      )
-      .setFooter(`${getBDTimeAndDate()}`);
+//     const embed = new Discord.MessageEmbed()
+//       .setColor("YELLOW")
+//       .setTitle("⛔ Bulk Delete Detected ⛔")
+//       .setDescription(
+//         "Someone has just deleted messages in bulk. I will try to generate a dump file from those messages. (PS: Empty `content` field in an object means that the message was an image or an attachment."
+//       )
+//       .setFooter(`${getBDTimeAndDate()}`);
 
-    await client.channels.cache.get(process.env.CHANNEL_ID).send(embed); // Cant send embeds with files for some reason -,-
+//     await client.channels.cache.get(process.env.CHANNEL_ID).send(embed); // Cant send embeds with files for some reason -,-
 
-    client.channels.cache.get(process.env.CHANNEL_ID).send("", {
-      files: ["./temp/dump.json"],
-    });
+//     client.channels.cache.get(process.env.CHANNEL_ID).send("", {
+//       files: ["./temp/dump.json"],
+//     });
 
-  } catch (err) {
-    console.error(err);
-    return;
-  }
-});
+//   } catch (err) {
+//     console.error(err);
+//     return;
+//   }
+// });
 
 client.login(process.env.token);
