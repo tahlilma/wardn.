@@ -55,7 +55,9 @@ schedule.scheduleJob("0 0 * * *", async () => {
   const embed = new Discord.MessageEmbed()
     .setColor("GREEN")
     .setTitle("Todays Data")
-    .setDescription("This is a log of all the messages sent today.")
+    .setDescription(
+      "This is a log of all the messages sent in the last 24 hours."
+    )
     .setFooter(getBDTimeAndDate());
   await client.channels.cache.get(process.env.CHANNEL_ID).send(embed);
   await client.channels.cache.get(process.env.CHANNEL_ID).send("", {
@@ -87,41 +89,54 @@ client.on("messageDelete", (message) => {
   }
 });
 
-// Replit moment
-// client.on("messageDeleteBulk", async (messages) => {
-//   try {
-//     const data = messages.map((message) => {
-//       return {
-//         senderID: message.author.id,
-//         senderName: message.author.tag,
-//         content: message.content,
-//         channel: message.channel.name,
-//         deletedAt: getBDTimeAndDate(),
-//       };
-//     });
+client.on("messageDeleteBulk", async (messages) => {
+  try {
+    const data = messages.map((message) => {
+      return {
+        senderID: message.author.id,
+        senderName: message.author.tag,
+        content: message.content,
+        channel: message.channel.name,
+        deletedAt: getBDTimeAndDate(),
+      };
+    });
 
-//     const prettyPrint = JSON.stringify(data, null, 2); // make it pretty
+    const prettyPrint = JSON.stringify(data.reverse(), null, 2); // make it pretty
 
-//     await fs.writeFile("./temp/dump.json", prettyPrint, "utf-8");
+    fs.writeFile("./temp/dump.json", prettyPrint, async () => {
+      const embed = new Discord.MessageEmbed()
+        .setColor("YELLOW")
+        .setTitle("⛔ Bulk Delete Detected ⛔")
+        .setDescription(
+          "Someone has just deleted messages in bulk. I will try to generate a dump file from those messages. (PS: Empty `content` field in an object means that the message was an image or an attachment."
+        )
+        .addFields([
+          {
+            name: "Messages Deleted",
+            value: `\`${data.length}\``,
+            inline: true,
+          },
+          {
+            name: "Channel Deleted In",
+            value: `\`${data[0].channel}\``,
+            inline: true,
+          },
+        ])
+        .setFooter(`${getBDTimeAndDate()}`);
 
-//     const embed = new Discord.MessageEmbed()
-//       .setColor("YELLOW")
-//       .setTitle("⛔ Bulk Delete Detected ⛔")
-//       .setDescription(
-//         "Someone has just deleted messages in bulk. I will try to generate a dump file from those messages. (PS: Empty `content` field in an object means that the message was an image or an attachment."
-//       )
-//       .setFooter(`${getBDTimeAndDate()}`);
+      await client.channels.cache.get(process.env.CHANNEL_ID).send(embed); // Cant send embeds with files for some reason -,-
+      await client.channels.cache.get(process.env.CHANNEL_ID).send("", {
+        files: ["./temp/dump.json"],
+      });
 
-//     await client.channels.cache.get(process.env.CHANNEL_ID).send(embed); // Cant send embeds with files for some reason -,-
-
-//     client.channels.cache.get(process.env.CHANNEL_ID).send("", {
-//       files: ["./temp/dump.json"],
-//     });
-
-//   } catch (err) {
-//     console.error(err);
-//     return;
-//   }
-// });
+      fs.writeFile("./temp/dump.json", "[]", () =>
+        console.log("Dump Resetted")
+      );
+    });
+  } catch (err) {
+    console.error(err);
+    return;
+  }
+});
 
 client.login(process.env.token);
