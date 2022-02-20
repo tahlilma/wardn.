@@ -112,12 +112,12 @@ client.on("messageDeleteBulk", async (messages) => {
         )
         .addFields([
           {
-            name: "Messages Deleted",
+            name: "Messages Deleted:",
             value: `\`${data.length}\``,
             inline: true,
           },
           {
-            name: "Channel Deleted In",
+            name: "Channel Name:",
             value: `\`${data[0].channel}\``,
             inline: true,
           },
