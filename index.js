@@ -18,10 +18,13 @@ const client = new Discord.Client();
 const getBDTimeAndDate = () => {
   const date = new Date();
   const hours = date.getUTCHours() + 6;
-  const minutes = date.getUTCMinutes();
+  let minutes = date.getUTCMinutes();
   const direct = date.getUTCDate();
   const month = date.getUTCMonth();
   const year = date.getUTCFullYear();
+  if (minutes <= 9) {
+    minutes = '0' + minutes;
+  }
   return `${hours}:${minutes} on ${direct}/${month + 1}/${year}`;
 };
 
@@ -68,6 +71,7 @@ schedule.scheduleJob("0 0 * * *", async () => {
 });
 
 client.on("messageUpdate", (oldMessage, newMessage) => {
+  if (oldMessage.channel.id === '807194192039378996') return;
   try {
     const embed = new Discord.MessageEmbed()
       .setColor("YELLOW")
