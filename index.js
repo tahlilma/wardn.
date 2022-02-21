@@ -71,7 +71,7 @@ schedule.scheduleJob("0 0 * * *", async () => {
 });
 
 client.on("messageUpdate", (oldMessage, newMessage) => {
-  if (oldMessage.channel.id === "807194192039378996") return;
+  if (oldMessage.content.includes("open.spotify.com")) return; // Hatred For Spotify
   try {
     const embed = new Discord.MessageEmbed()
       .setColor("YELLOW")
