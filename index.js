@@ -54,7 +54,7 @@ client.on("message", (message) => {
 schedule.scheduleJob("0 0 * * *", async () => {
   const embed = new Discord.MessageEmbed()
     .setColor("GREEN")
-    .setTitle("Todays Data")
+    .setTitle("✅ Todays Data ✅")
     .setDescription(
       "This is a log of all the messages sent in the last 24 hours."
     )
@@ -65,6 +65,25 @@ schedule.scheduleJob("0 0 * * *", async () => {
   });
 
   fs.writeFileSync("./log.json", "[]", "utf-8");
+});
+
+client.on("messageUpdate", (oldMessage, newMessage) => {
+  try {
+    const embed = new Discord.MessageEmbed()
+      .setColor("YELLOW")
+      .setTitle("⚠ Message Edit Detected ⚠")
+      .addFields([
+        { name: "Message Sender:", value: `<@${oldMessage.author.id}>` },
+        { name: "Edited At:", value: `\`${getBDTimeAndDate()}\`` },
+        { name: "Channel Name:", value: `\`${oldMessage.channel.name}\`` },
+        { name: "Old Message:", value: oldMessage.content },
+        { name: "New Message:", value: newMessage.content },
+      ]);
+    client.channels.cache.get(process.env.CHANNEL_ID).send(embed);
+  } catch (err) {
+    console.error(err);
+    return;
+  }
 });
 
 client.on("messageDelete", (message) => {
@@ -105,7 +124,7 @@ client.on("messageDeleteBulk", async (messages) => {
 
     fs.writeFile("./temp/dump.json", prettyPrint, async () => {
       const embed = new Discord.MessageEmbed()
-        .setColor("YELLOW")
+        .setColor("RED")
         .setTitle("⛔ Bulk Delete Detected ⛔")
         .setDescription(
           "Someone has just deleted messages in bulk. I will try to generate a dump file from those messages. (PS: Empty `content` field in an object means that the message was an image or an attachment."
