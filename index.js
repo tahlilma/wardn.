@@ -71,7 +71,9 @@ schedule.scheduleJob("0 0 * * *", async () => {
 });
 
 client.on("messageUpdate", (oldMessage, newMessage) => {
-  if (oldMessage.content.includes("open.spotify.com")) return; // Hatred For Spotify
+  const linkRegexp =
+    /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,4}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/g;
+  if (linkRegexp.test(oldMessage.content)) return; // No links please
   try {
     const embed = new Discord.MessageEmbed()
       .setColor("YELLOW")
