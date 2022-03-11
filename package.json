@@ -16,6 +16,7 @@
   "dependencies": {
     "discord.js": "^12.5.3",
     "dotenv": "^16.0.0",
+    "download": "^8.0.0",
     "express": "^4.17.3",
     "node-schedule": "^2.1.0"
   }

@@ -2,7 +2,9 @@ const express = require("express");
 const app = express();
 const Discord = require("discord.js");
 const fs = require("fs");
+const path = require("path");
 const schedule = require("node-schedule");
+const download = require("download");
 require("dotenv").config();
 
 const port = 3000;
@@ -92,11 +94,52 @@ client.on("messageUpdate", (oldMessage, newMessage) => {
   }
 });
 
-client.on("messageDelete", (message) => {
+client.on("messageDelete", async (message) => {
   if (message.author.bot) return;
   if (message.content.split(" ")[0] === "!clear") return; // mee6 specific shit
 
   try {
+    if (message.attachments.first()) {
+      await download(message.attachments.first().url, "backup");
+
+      await client.channels.cache.get(process.env.CHANNEL_ID).send(
+        new Discord.MessageEmbed()
+          .setColor("RED")
+          .setTitle("⛔ Attachment Delete Detected ⛔")
+          .setDescription(
+            "Someone deleted a message containing a attachment. (This only sends the first attachment in the case of a bulk send being deleted. Since I was too lazy to implement it.)"
+          )
+          .addFields([
+            { name: "Message Sender:", value: `<@${message.author.id}>` },
+            { name: "Deleted At:", value: `\`${getBDTimeAndDate()}\`` },
+            { name: "Channel Name:", value: `\`${message.channel.name}\`` },
+            {
+              name: "Message:",
+              value: `${!message.content ? "No Content" : message.content}`,
+            },
+          ])
+      );
+
+      const files = fs.readdirSync("./backup");
+      await client.channels.cache.get(process.env.CHANNEL_ID).send("", {
+        files: [`./backup/${files[0]}`],
+      });
+
+      fs.readdir("./backup", (err, files) => {
+        if (err) throw err;
+
+        for (const file of files) {
+          fs.unlink(path.join("./backup", file), (err) => {
+            if (err) throw err;
+          });
+        }
+
+        console.log("File Sent And Deleted");
+      });
+
+      return;
+    }
+
     const embed = new Discord.MessageEmbed()
       .setColor("RED")
       .setTitle(`⛔ Delete Detected ⛔`)
